@@ -1,9 +1,9 @@
-from struct import pack, unpack
+import struct
 
 
-p32 = lambda x:pack("<I", x)
-u32 = lambda x:unpack("<I", x)[0]
-p64 = lambda x:pack("<Q", x)
-u64 = lambda x:unpack("<Q", x)[0]
+p32 = lambda x:struct.pack("<I", x)
+u32 = lambda x:struct.unpack("<I", x)[0]
+p64 = lambda x:struct.pack("<Q", x)
+u64 = lambda x:struct.unpack("<Q", x)[0]
 
 __all__ = vars().keys()
