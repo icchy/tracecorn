@@ -1,10 +1,12 @@
+from __future__ import absolute_import
+
 from unicorn import *
 from unicorn.x86_const import *
 
 from capstone import *
 from capstone.x86_const import *
 
-from unitracer import Unitracer
+from .unitracer import Unitracer
 from util import *
 
 import sys
