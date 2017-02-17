@@ -1,15 +1,35 @@
+from __future__ import absolute_import
+
 from ctypes import *
-from win32.defines import *
+from ..types import *
 
 
 class IMAGE_DOS_HEADER(Structure):
-    _field_ = [
-        ()
+    _fields_ = [
+        ("e_magic",             WORD),
+        ("e_cblp",              WORD),
+        ("e_cp",                WORD),
+        ("e_crlc",              WORD),
+        ("e_cparhdr",           WORD),
+        ("e_minalloc",          WORD),
+        ("e_maxalloc",          WORD),
+        ("e_ss",                WORD),
+        ("e_sp",                WORD),
+        ("e_csum",              WORD),
+        ("e_ip",                WORD),
+        ("e_cs",                WORD),
+        ("e_lfarlc",            WORD),
+        ("e_ovno",              WORD),
+        ("e_res[4]",            WORD),
+        ("e_oemid",             WORD),
+        ("e_oeminfo",           WORD),
+        ("e_res2[10]",          WORD),
+        ("e_lfanew",            LONG),
     ]
 
 
 class IMAGE_FILE_HEADER(Structure):
-    _field_ = [
+    _fields_ = [
         ("Machine",                 WORD),
         ("NumberOfSections",        WORD),
         ("TimeDateStamp",           DWORD),
@@ -42,7 +62,7 @@ IMAGE_FILE_BYTES_REVERSED_HI        = 0x8000
 
 
 class IMAGE_DATA_DIRECTORY(Structure):
-    _field_ = [
+    _fields_ = [
         ("VirtualAddress",              DWORD),
         ("Size",                        DWORD),
     ]
@@ -52,7 +72,7 @@ PIMAGE_DATA_DIRECTORY = POINTER(IMAGE_DATA_DIRECTORY)
 IMAGE_NUMBEROF_DIRECTORY_ENTRIES = 16
 
 class IMAGE_OPTIONAL_HEADER32(Structure):
-    _field_ = [
+    _fields_ = [
         ("Magic",                       WORD), 
         ("MajorLinkerVersion",          BYTE), 
         ("MinorLinkerVersion",          BYTE), 
@@ -88,7 +108,7 @@ class IMAGE_OPTIONAL_HEADER32(Structure):
 PIMAGE_OPTIONAL_HEADER32 = POINTER(IMAGE_OPTIONAL_HEADER32)
 
 class IMAGE_OPTIONAL_HEADER64(Structure):
-    _field_ = [
+    _fields_ = [
         ("Magic",                       WORD), 
         ("MajorLinkerVersion",          BYTE), 
         ("MinorLinkerVersion",          BYTE), 
@@ -125,7 +145,7 @@ PIMAGE_OPTIONAL_HEADER64 = POINTER(IMAGE_OPTIONAL_HEADER64)
 
 
 class IMAGE_NT_HEADERS32(Structure):
-    _field_ = [
+    _fields_ = [
         ("Signature",       DWORD),
         ("FileHeader",      IMAGE_FILE_HEADER),
         ("OptionalHeader",  IMAGE_OPTIONAL_HEADER32),
@@ -134,12 +154,9 @@ PIMAGE_NT_HEADERS32 = POINTER(IMAGE_NT_HEADERS32)
 
 
 class IMAGE_NT_HEADERS64(Structure):
-    _field_ = [
+    _fields_ = [
         ("Signature",       DWORD),
         ("FileHeader",      IMAGE_FILE_HEADER),
         ("OptionalHeader",  IMAGE_OPTIONAL_HEADER32),
     ]
 PIMAGE_NT_HEADERS64 = POINTER(IMAGE_NT_HEADERS64)
-
-
-
