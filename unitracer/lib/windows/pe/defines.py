@@ -20,10 +20,10 @@ class IMAGE_DOS_HEADER(Structure):
         ("e_cs",                WORD),
         ("e_lfarlc",            WORD),
         ("e_ovno",              WORD),
-        ("e_res[4]",            WORD),
+        ("e_res",               WORD * 4),
         ("e_oemid",             WORD),
         ("e_oeminfo",           WORD),
-        ("e_res2[10]",          WORD),
+        ("e_res2",              WORD * 10),
         ("e_lfanew",            LONG),
     ]
 
