@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 from ctypes import *
-from ..types import *
+from .types import *
 
 
 class IMAGE_DOS_HEADER(Structure):
