@@ -145,9 +145,9 @@ class IMAGE_THUNK_DATA64(Structure):
 PIMAGE_THUNK_DATA64 = POINTER(IMAGE_THUNK_DATA64)
 
 class IMAGE_IMPORT_BY_NAME(Structure):
-    _fileds_ = [
+    _fields_ = [
         ("Hint",    WORD),
-        ("Name",    BYTE),
+        ("Name",    BYTE * 1),
     ]
 PIMAGE_IMPORT_BY_NAME = POINTER(IMAGE_IMPORT_BY_NAME)
 
