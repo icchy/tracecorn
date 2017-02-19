@@ -85,75 +85,7 @@ IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT      = 13
 IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR    = 14
 
 
-class IMAGE_EXPORT_DIRECTORY(Structure):
-    _fields_ = [
-        ("Characteristics",        DWORD),
-        ("TimeDateStamp",          DWORD),
-        ("MajorVersion",           WORD),
-        ("MinorVersion",           WORD),
-        ("Name",                   DWORD),
-        ("Base",                   DWORD),
-        ("NumberOfFunctions",      DWORD),
-        ("NumberOfNames",          DWORD),
-        ("AddressOfFunctions",     DWORD),
-        ("AddressOfNames",         DWORD),
-        ("AddressOfNameOrdinals",  DWORD),
-    ]
-PIMAGE_EXPORT_DIRECTORY = POINTER(IMAGE_EXPORT_DIRECTORY)
-
-
-class IMAGE_IMPORT_DESCRIPTOR(Structure):
-    class _U(Union):
-        _fields_ = [
-            ("Characteristics",     DWORD),
-            ("OriginalFirstThunk",  DWORD),
-        ]
-
-    _anonymous_ = ("_u",)
-    _fields_ = [
-        ("_u",              _U),
-        ("TimeDateStamp",   DWORD),
-        ("ForwarderChain",  DWORD),
-        ("Name",            DWORD),
-        ("FirstThunk",      DWORD),
-    ]
-
-class IMAGE_THUNK_DATA32(Structure):
-    class _U(Union):
-        _fields_ = [
-            ("ForwarderString", DWORD),
-            ("Function",        DWORD),
-            ("Ordinal",         DWORD),
-            ("AddressOfData",   DWORD),
-        ]
-    _fields_ = [
-        ("u1",  _U),
-    ]
-PIMAGE_THUNK_DATA32 = POINTER(IMAGE_THUNK_DATA32)
-
-class IMAGE_THUNK_DATA64(Structure):
-    class _U(Union):
-        _fields_ = [
-            ("ForwarderString", ULONGLONG),
-            ("Function",        ULONGLONG),
-            ("Ordinal",         ULONGLONG),
-            ("AddressOfData",   ULONGLONG),
-        ]
-    _fileds_ = [
-        ("u1",  _U),
-    ]
-PIMAGE_THUNK_DATA64 = POINTER(IMAGE_THUNK_DATA64)
-
-class IMAGE_IMPORT_BY_NAME(Structure):
-    _fields_ = [
-        ("Hint",    WORD),
-        ("Name",    BYTE * 1),
-    ]
-PIMAGE_IMPORT_BY_NAME = POINTER(IMAGE_IMPORT_BY_NAME)
-
-
 IMAGE_NUMBEROF_DIRECTORY_ENTRIES = 16
-
 class IMAGE_OPTIONAL_HEADER32(Structure):
     _fields_ = [
         ("Magic",                       WORD), 
@@ -268,3 +200,92 @@ class IMAGE_NT_HEADERS64(Structure):
         ("OptionalHeader",  IMAGE_OPTIONAL_HEADER32),
     ]
 PIMAGE_NT_HEADERS64 = POINTER(IMAGE_NT_HEADERS64)
+
+
+class IMAGE_SECTION_HEADER(Structure):
+    class Misc(Union):
+        _fields_ = [
+            ("PhysicalAddress",  DWORD),
+            ("VirtualSize",      DWORD),
+        ]
+    _fields_ = [
+        ("Name",                    BYTE * 8), 
+        ("Misc",                    Misc), 
+        ("VirtualAddress",          DWORD), 
+        ("SizeOfRawData",           DWORD), 
+        ("PointerToRawData",        DWORD), 
+        ("PointerToRelocations",    DWORD), 
+        ("PointerToLinenumbers",    DWORD), 
+        ("NumberOfRelocations",     WORD), 
+        ("NumberOfLinenumbers",     WORD), 
+        ("Characteristics",         DWORD), 
+    ]
+PIMAGE_SECTION_HEADER = POINTER(IMAGE_SECTION_HEADER)
+
+
+class IMAGE_EXPORT_DIRECTORY(Structure):
+    _fields_ = [
+        ("Characteristics",        DWORD),
+        ("TimeDateStamp",          DWORD),
+        ("MajorVersion",           WORD),
+        ("MinorVersion",           WORD),
+        ("Name",                   DWORD),
+        ("Base",                   DWORD),
+        ("NumberOfFunctions",      DWORD),
+        ("NumberOfNames",          DWORD),
+        ("AddressOfFunctions",     DWORD),
+        ("AddressOfNames",         DWORD),
+        ("AddressOfNameOrdinals",  DWORD),
+    ]
+PIMAGE_EXPORT_DIRECTORY = POINTER(IMAGE_EXPORT_DIRECTORY)
+
+
+class IMAGE_IMPORT_DESCRIPTOR(Structure):
+    class _U(Union):
+        _fields_ = [
+            ("Characteristics",     DWORD),
+            ("OriginalFirstThunk",  DWORD),
+        ]
+
+    _anonymous_ = ("_u",)
+    _fields_ = [
+        ("_u",              _U),
+        ("TimeDateStamp",   DWORD),
+        ("ForwarderChain",  DWORD),
+        ("Name",            DWORD),
+        ("FirstThunk",      DWORD),
+    ]
+
+class IMAGE_THUNK_DATA32(Structure):
+    class _U(Union):
+        _fields_ = [
+            ("ForwarderString", DWORD),
+            ("Function",        DWORD),
+            ("Ordinal",         DWORD),
+            ("AddressOfData",   DWORD),
+        ]
+    _fields_ = [
+        ("u1",  _U),
+    ]
+PIMAGE_THUNK_DATA32 = POINTER(IMAGE_THUNK_DATA32)
+
+class IMAGE_THUNK_DATA64(Structure):
+    class _U(Union):
+        _fields_ = [
+            ("ForwarderString", ULONGLONG),
+            ("Function",        ULONGLONG),
+            ("Ordinal",         ULONGLONG),
+            ("AddressOfData",   ULONGLONG),
+        ]
+    _fileds_ = [
+        ("u1",  _U),
+    ]
+PIMAGE_THUNK_DATA64 = POINTER(IMAGE_THUNK_DATA64)
+
+
+class IMAGE_IMPORT_BY_NAME(Structure):
+    _fields_ = [
+        ("Hint",    WORD),
+        ("Name",    BYTE * 16),
+    ]
+PIMAGE_IMPORT_BY_NAME = POINTER(IMAGE_IMPORT_BY_NAME)
