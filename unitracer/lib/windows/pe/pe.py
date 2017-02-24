@@ -15,11 +15,9 @@ MAX_IMPORT_NAME_LENGTH = 0x200
 class PE(object):
     def __init__(self, fname):
         fp = open(fname, "rb")
-        buf = BytesIO(fp.read())
 
         self.fname = fname
         self.fp = fp
-        self.buf = buf
 
         self.check()
         self.parse()
@@ -84,7 +82,6 @@ class PE(object):
             data = fp.read(section_header.Misc.VirtualSize)
             section_header.data = data
 
-
         optional_header = nt_header.OptionalHeader
         entrypoint = optional_header.AddressOfEntryPoint
         imagebase = optional_header.ImageBase
@@ -105,9 +102,17 @@ class PE(object):
         self.stacksize = stacksize
         self.heapsize = heapsize
 
+        self.map_data()
         self.parse_import_directory()
         if isdll:
             self.parse_export_directory()
+
+
+    def map_data(self):
+        fp = self.fp
+        section_headers = self.section_headers
+        assert section_headers is not None, "No sections found"
+
 
 
     # parse ENTRY_EXPORT
@@ -188,7 +193,12 @@ class PE(object):
             while True:
                 vaddr = self.imagebase + self.p2v(fp.tell())
                 fp.readinto(thunk_data)
+
+                # end of thunk_data
                 if thunk_data.u1.AddressOfData == 0:
+                    break
+                # the data is ordinal
+                if thunk_data.u1.Ordinal & 0x80000000:
                     break
 
                 load_cdata(v2p(thunk_data.u1.AddressOfData), import_by_name)
