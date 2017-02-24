@@ -63,6 +63,9 @@ class PE(object):
 
         file_header = nt_header.FileHeader
 
+        # check characteristics
+        assert file_header.Characteristics & IMAGE_FILE_EXECUTABLE_IMAGE, "Only exe and dll are supported"
+
         # parse sections
         section_headers = list()
         for _ in range(file_header.NumberOfSections):
@@ -71,9 +74,10 @@ class PE(object):
             section_headers.append(section_header)
 
         for section_header in section_headers:
-            print map(chr, section_header.Name)
-            print hex(section_header.Misc.PhysicalAddress)
-            print hex(section_header.VirtualAddress)
+            fp.seek(section_header.PointerToRawData)
+            data = fp.read(section_header.Misc.VirtualSize)
+            section_header.data = data
+
 
         optional_header = nt_header.OptionalHeader
         entrypoint = optional_header.AddressOfEntryPoint
@@ -85,6 +89,8 @@ class PE(object):
         heapsize = optional_header.SizeOfHeapReserve
 
         self.nt_header = nt_header
+        self.section_headers = section_headers
+
         self.entrypoint = entrypoint
         self.imagebase = imagebase
         self.alignment = alignment
@@ -92,6 +98,7 @@ class PE(object):
         self.headersize = headersize
         self.stacksize = stacksize
         self.heapsize = heapsize
+
 
         self.parse_import_directory()
         # if nt_header.FileHeader.Characteristics & IMAGE_FILE_DLL:
@@ -128,10 +135,12 @@ class PE(object):
         DataDirectory = nt_header.OptionalHeader.DataDirectory
         data_directory = DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT]
 
+        v2p = self.v2p
+        getstr = self.getstr
+
+
         # parse ENTRY_IMPORT
-        print hex(self.imagebase)
-        print hex(data_directory.VirtualAddress)
-        fp.seek(data_directory.VirtualAddress)
+        fp.seek(v2p(data_directory.VirtualAddress))
         import_dirs = list()
         while True:
             import_dir = IMAGE_IMPORT_DESCRIPTOR()
@@ -141,10 +150,10 @@ class PE(object):
             import_dirs.append(import_dir)
 
         for import_dir in import_dirs:
-            print self.getstr(import_dir.Name)
+            print getstr(v2p(import_dir.Name))
 
             # Import Name Table
-            fp.seek(import_dir.OriginalFirstThunk)
+            fp.seek(v2p(import_dir.FirstThunk))
             thunk_data = {
                 32: IMAGE_THUNK_DATA32,
                 64: IMAGE_THUNK_DATA64,
@@ -157,11 +166,24 @@ class PE(object):
                 fp.seek(offset)
                 fp.readinto(import_by_name)
                 offset += 2
-                name = self.getstr(offset)
+                name = getstr(v2p(offset))
                 if not name:
                     break
-                print name
+                # print name
                 offset += len(name)+1
+
+
+    def v2p(self, addr):
+        section_headers = self.section_headers
+        assert section_headers is not None, "No sections found"
+
+        for sh in section_headers:
+            offset = addr - sh.VirtualAddress
+            if 0 <= offset < sh.SizeOfRawData: # aligned address (Virtual)
+                return sh.PointerToRawData + offset
+
+        raise Exception, "No suitable section found"
+
 
 
     def getstr(self, offset, size=0, save=True):
