@@ -139,14 +139,14 @@ class PE(object):
 
     # parse ENTRY_EXPORT
     def parse_export_directory(self):
-        fp = self.fp
+        fp = self.mapped
         bits = self.bits
         nt_header = self.nt_header
         DataDirectory = nt_header.OptionalHeader.DataDirectory
         data_directory = DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT]
-        v2p = self.v2p
         getstr = self.getstr
         getaddr = self.getaddr
+        getint = self.getint
 
         fp.seek(data_directory.VirtualAddress)
         export_dir = IMAGE_EXPORT_DIRECTORY()
@@ -157,11 +157,17 @@ class PE(object):
 
         addr_names = export_dir.AddressOfNames
         addr_funcs = export_dir.AddressOfFunctions
+        addr_ordinals = export_dir.AddressOfNameOrdinals
 
+        infos = list()
         for i in range(export_dir.NumberOfNames):
-            addr = getaddr(v2p(addr_funcs) + (bits/8)*i)
-            name = getstr(v2p(getaddr(v2p(addr_names) + (bits/8)*i)))
-            exports[name] = addr
+            addr = getaddr(addr_funcs + (bits/8)*i, isrva=True)
+            name = getstr(getaddr(addr_names + (bits/8)*i, isrva=True), isrva=True)
+            ordinal = getint(addr_ordinals + 2*i, 2, isrva=True)
+            infos.append([addr, name, ordinal])
+
+        for addr, name, ordinal in infos:
+            exports[name] = infos[ordinal][0]
 
         self.exports = exports
 
@@ -172,7 +178,6 @@ class PE(object):
         nt_header = self.nt_header
         DataDirectory = nt_header.OptionalHeader.DataDirectory
         data_directory = DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT]
-        v2p = self.v2p
         getstr = self.getstr
         load_cdata = self._load_cdata
 
@@ -190,7 +195,7 @@ class PE(object):
 
 
         for import_dir in import_dirs:
-            dllname = getstr(v2p(import_dir.Name))
+            dllname = getstr(import_dir.Name, isrva=True)
             imports[dllname] = dict()
 
             import_by_name = IMAGE_IMPORT_BY_NAME()
@@ -299,6 +304,28 @@ class PE(object):
             32: ("<I", 4),
             64: ("<Q", 8),
         }[self.bits]
+        fp.seek(offset)
+        res = unpack(fmt, fp.read(size))[0]
+
+        fp.seek(save)
+
+        return res
+
+
+    def getint(self, offset, size, isrva=False):
+        if not isrva:
+            fp = self.fp
+        else:
+            fp = self.mapped
+
+        save = fp.tell()
+
+        fmt, size = {
+            1: ("<B", 1),
+            2: ("<H", 2),
+            4: ("<I", 4),
+            8: ("<Q", 8),
+        }[size]
         fp.seek(offset)
         res = unpack(fmt, fp.read(size))[0]
 
