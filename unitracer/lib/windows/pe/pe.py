@@ -165,19 +165,15 @@ class PE(object):
 
         exports = dict()
 
-        addr_names = export_dir.AddressOfNames
-        addr_funcs = export_dir.AddressOfFunctions
-        addr_ordinals = export_dir.AddressOfNameOrdinals
+        funcs = [getaddr(export_dir.AddressOfFunctions + (bits/8)*i, isrva=True) \
+                for i in range(export_dir.NumberOfFunctions)]
+        names = [getstr(getaddr(export_dir.AddressOfNames + (bits/8)*i, isrva=True), isrva=True) \
+                for i in range(export_dir.NumberOfNames)]
+        ordinals = [getint(export_dir.AddressOfNameOrdinals + 2*i, 2, isrva=True) \
+                for i in range(export_dir.NumberOfNames)]
 
-        infos = list()
-        for i in range(export_dir.NumberOfNames):
-            addr = getaddr(addr_funcs + (bits/8)*i, isrva=True)
-            name = getstr(getaddr(addr_names + (bits/8)*i, isrva=True), isrva=True)
-            ordinal = getint(addr_ordinals + 2*i, 2, isrva=True)
-            infos.append([addr, name, ordinal])
-
-        for addr, name, ordinal in infos:
-            exports[name] = infos[ordinal][0]
+        for i in range(len(names)):
+            exports[names[i]] = funcs[ordinals[i]]
 
         self.exports = exports
 
