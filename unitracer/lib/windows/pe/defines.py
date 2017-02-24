@@ -283,9 +283,11 @@ class IMAGE_THUNK_DATA64(Structure):
 PIMAGE_THUNK_DATA64 = POINTER(IMAGE_THUNK_DATA64)
 
 
+MAX_SYMBOL_LENGTH = 0x200
+ctype_buffer = type(create_string_buffer(MAX_SYMBOL_LENGTH))
 class IMAGE_IMPORT_BY_NAME(Structure):
     _fields_ = [
         ("Hint",    WORD),
-        ("Name",    BYTE * 16),
+        ("Name",    ctype_buffer),
     ]
 PIMAGE_IMPORT_BY_NAME = POINTER(IMAGE_IMPORT_BY_NAME)

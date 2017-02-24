@@ -8,6 +8,10 @@ import os
 from .defines import *
 
 
+MAX_DLL_NAME_LENGTH = 0x200
+MAX_IMPORT_NAME_LENGTH = 0x200
+
+
 class PE(object):
     def __init__(self, fname):
         fp = open(fname, "rb")
@@ -38,6 +42,9 @@ class PE(object):
         assert sizeof(nt_header) == fp.readinto(nt_header), "Invalid PE header length"
         assert pack("I", nt_header.Signature) == 'PE\x00\x00', "Invalid PE magic"
 
+        # check characteristics
+        assert nt_header.FileHeader.Characteristics & IMAGE_FILE_EXECUTABLE_IMAGE, "Only exe and dll are supported"
+
         bits = {
             IMAGE_NT_OPTIONAL_HDR32_MAGIC: 32,
             IMAGE_NT_OPTIONAL_HDR64_MAGIC: 64,
@@ -45,6 +52,7 @@ class PE(object):
 
         self.dos_header = dos_header
         self.bits = bits
+        self.isdll = nt_header.FileHeader.Characteristics & IMAGE_FILE_DLL
 
 
     # parse header and directories
@@ -52,6 +60,7 @@ class PE(object):
         fp = self.fp
         dos_header = self.dos_header
         bits = self.bits
+        isdll = self.isdll
 
         nt_header = {
             32: IMAGE_NT_HEADERS32,
@@ -62,9 +71,6 @@ class PE(object):
         assert sizeof(nt_header) == fp.readinto(nt_header), "Invalid PE header length"
 
         file_header = nt_header.FileHeader
-
-        # check characteristics
-        assert file_header.Characteristics & IMAGE_FILE_EXECUTABLE_IMAGE, "Only exe and dll are supported"
 
         # parse sections
         section_headers = list()
@@ -99,19 +105,21 @@ class PE(object):
         self.stacksize = stacksize
         self.heapsize = heapsize
 
-
         self.parse_import_directory()
-        # if nt_header.FileHeader.Characteristics & IMAGE_FILE_DLL:
-        #     self.parse_export_directory()
+        if isdll:
+            self.parse_export_directory()
 
 
+    # parse ENTRY_EXPORT
     def parse_export_directory(self):
-        # parse ENTRY_EXPORT
         fp = self.fp
         bits = self.bits
         nt_header = self.nt_header
         DataDirectory = nt_header.OptionalHeader.DataDirectory
         data_directory = DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT]
+        v2p = self.v2p
+        getstr = self.getstr
+        getaddr = self.getaddr
 
         fp.seek(data_directory.VirtualAddress)
         export_dir = IMAGE_EXPORT_DIRECTORY()
@@ -119,10 +127,13 @@ class PE(object):
         # assert export_dir.NumberOfFunctions == export_dir.NumberOfNames, "NumberOfFunctions != NumberOfNames"
 
         exports = dict()
-        addr_names_dir = export_dir.AddressOfNames
-        for i in range(export_dir.NumberOfFunctions):
-            addr = self.getaddr(addr_names_dir + (bits/8)*i)
-            name = self.getstr(addr)
+
+        addr_names = export_dir.AddressOfNames
+        addr_funcs = export_dir.AddressOfFunctions
+
+        for i in range(export_dir.NumberOfNames):
+            addr = getaddr(v2p(addr_funcs) + (bits/8)*i)
+            name = getstr(v2p(getaddr(v2p(addr_names) + (bits/8)*i)))
             exports[name] = addr
 
         self.exports = exports
@@ -134,10 +145,11 @@ class PE(object):
         nt_header = self.nt_header
         DataDirectory = nt_header.OptionalHeader.DataDirectory
         data_directory = DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT]
-
         v2p = self.v2p
         getstr = self.getstr
+        load_cdata = self._load_cdata
 
+        imports = dict()
 
         # parse ENTRY_IMPORT
         fp.seek(v2p(data_directory.VirtualAddress))
@@ -149,28 +161,50 @@ class PE(object):
                 break
             import_dirs.append(import_dir)
 
-        for import_dir in import_dirs:
-            print getstr(v2p(import_dir.Name))
 
-            # Import Name Table
-            fp.seek(v2p(import_dir.FirstThunk))
+        for import_dir in import_dirs:
+            dllname = getstr(v2p(import_dir.Name))
+            imports[dllname] = dict()
+
+            import_by_name = IMAGE_IMPORT_BY_NAME()
+            # # Import Name Table
+            # ## array of pointers to IMAGE_IMPORT_BY_NAME
+            # fp.seek(v2p(import_dir.OriginalFirstThunk))
+            # p = DWORD()
+            # while True:
+            #     fp.readinto(p)
+            #     if p.value == 0:
+            #         break
+            #     load_cdata(v2p(p.value), import_by_name)
+
+
+            # Import Address Table
             thunk_data = {
                 32: IMAGE_THUNK_DATA32,
                 64: IMAGE_THUNK_DATA64,
             }[bits]()
-            fp.readinto(thunk_data)
 
-            offset = thunk_data.u1.AddressOfData
-            import_by_name = IMAGE_IMPORT_BY_NAME()
+            fp.seek(v2p(import_dir.FirstThunk))
             while True:
-                fp.seek(offset)
-                fp.readinto(import_by_name)
-                offset += 2
-                name = getstr(v2p(offset))
-                if not name:
+                vaddr = self.imagebase + self.p2v(fp.tell())
+                fp.readinto(thunk_data)
+                if thunk_data.u1.AddressOfData == 0:
                     break
-                # print name
-                offset += len(name)+1
+
+                load_cdata(v2p(thunk_data.u1.AddressOfData), import_by_name)
+                imports[dllname][import_by_name.Name] = vaddr
+
+        self.imports = imports
+
+
+
+    def _load_cdata(self, offset, c_data, check=True):
+        fp = self.fp
+        save = fp.tell()
+        fp.seek(offset)
+        assert sizeof(c_data) == fp.readinto(c_data) and check, "Invalid length loaded"
+        fp.seek(save)
+        self.fp = fp
 
 
     def v2p(self, addr):
@@ -185,8 +219,17 @@ class PE(object):
         raise Exception, "No suitable section found"
 
 
+    def p2v(self, addr):
+        section_headers = self.section_headers
+        assert section_headers is not None, "No sections found"
 
-    def getstr(self, offset, size=0, save=True):
+        for sh in section_headers:
+            offset = addr - sh.PointerToRawData
+            if 0 <= offset < sh.SizeOfRawData:
+                return sh.VirtualAddress + offset
+
+
+    def getstr(self, offset, size=0, limit=0, save=True):
         fp = self.fp
         if save:
             old_off = fp.tell()
@@ -204,6 +247,7 @@ class PE(object):
             fp.seek(old_off)
 
         return res
+
 
     def getaddr(self, offset):
         fp = self.fp
