@@ -1,4 +1,6 @@
-from util import *
+from __future__ import absolute_import
+
+from .lib.util import *
 
 class Unitracer(object):
     def __init__(self, mem_size = 15*1024*1024):

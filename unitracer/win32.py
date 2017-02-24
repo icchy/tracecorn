@@ -7,8 +7,9 @@ from capstone import *
 from capstone.x86_const import *
 
 from .unitracer import Unitracer
-from util import *
+from .lib.util import *
 from unitracer.lib.windows.pe import *
+from unitracer.lib.windows.i386 import *
 
 import sys
 import struct
@@ -105,7 +106,6 @@ class Win32(Unitracer):
         dll = PE(path)
         data = bytearray(dll.mapped_data)
         for name, addr in dll.exports.items():
-            print name
             data[addr] = '\xc3'
             dll_funcs[base + addr] = name
 
