@@ -91,9 +91,6 @@ class PE(object):
         stacksize = optional_header.SizeOfStackReserve
         heapsize = optional_header.SizeOfHeapReserve
 
-        self.nt_header = nt_header
-        self.section_headers = section_headers
-
         self.entrypoint = entrypoint
         self.imagebase = imagebase
         self.alignment = alignment
@@ -102,7 +99,11 @@ class PE(object):
         self.stacksize = stacksize
         self.heapsize = heapsize
 
+        self.nt_header = nt_header
+        self.section_headers = section_headers
+
         self.map_data()
+
         self.parse_import_directory()
         if isdll:
             self.parse_export_directory()
@@ -113,6 +114,27 @@ class PE(object):
         section_headers = self.section_headers
         assert section_headers is not None, "No sections found"
 
+        size = max(map(lambda x:x.VirtualAddress+x.SizeOfRawData, section_headers))
+        mapped = BytesIO("\x00"*size)
+
+        # map from head of file to tail of sections
+        struct2str = lambda x:BytesIO(x).read()
+        dos_header = self.dos_header
+        nt_header = self.nt_header
+
+        mapped.seek(0)
+        mapped.write(struct2str(dos_header))
+        mapped.write(struct2str(nt_header))
+        for sh in section_headers:
+            mapped.write(struct2str(sh))
+
+        # map section data
+        for sh in section_headers:
+            mapped.seek(sh.VirtualAddress)
+            fp.seek(sh.PointerToRawData)
+            mapped.write(fp.read(sh.Misc.VirtualSize))
+
+        self.mapped = mapped
 
 
     # parse ENTRY_EXPORT
@@ -145,7 +167,7 @@ class PE(object):
 
 
     def parse_import_directory(self):
-        fp = self.fp
+        fp = self.mapped
         bits = self.bits
         nt_header = self.nt_header
         DataDirectory = nt_header.OptionalHeader.DataDirectory
@@ -157,7 +179,7 @@ class PE(object):
         imports = dict()
 
         # parse ENTRY_IMPORT
-        fp.seek(v2p(data_directory.VirtualAddress))
+        fp.seek(data_directory.VirtualAddress)
         import_dirs = list()
         while True:
             import_dir = IMAGE_IMPORT_DESCRIPTOR()
@@ -172,7 +194,8 @@ class PE(object):
             imports[dllname] = dict()
 
             import_by_name = IMAGE_IMPORT_BY_NAME()
-            # # Import Name Table
+
+            # # Import Name Table (currently unused)
             # ## array of pointers to IMAGE_IMPORT_BY_NAME
             # fp.seek(v2p(import_dir.OriginalFirstThunk))
             # p = DWORD()
@@ -189,9 +212,9 @@ class PE(object):
                 64: IMAGE_THUNK_DATA64,
             }[bits]()
 
-            fp.seek(v2p(import_dir.FirstThunk))
+            fp.seek(import_dir.FirstThunk)
             while True:
-                vaddr = self.imagebase + self.p2v(fp.tell())
+                vaddr = self.imagebase + fp.tell()
                 fp.readinto(thunk_data)
 
                 # end of thunk_data
@@ -201,20 +224,23 @@ class PE(object):
                 if thunk_data.u1.Ordinal & 0x80000000:
                     break
 
-                load_cdata(v2p(thunk_data.u1.AddressOfData), import_by_name)
+                load_cdata(thunk_data.u1.AddressOfData, import_by_name, isrva=True)
                 imports[dllname][import_by_name.Name] = vaddr
 
         self.imports = imports
 
 
 
-    def _load_cdata(self, offset, c_data, check=True):
-        fp = self.fp
+    def _load_cdata(self, offset, c_data, isrva=False, check=True):
+        if not isrva:
+            fp = self.fp
+        else:
+            fp = self.mapped
+
         save = fp.tell()
         fp.seek(offset)
         assert sizeof(c_data) == fp.readinto(c_data) and check, "Invalid length loaded"
         fp.seek(save)
-        self.fp = fp
 
 
     def v2p(self, addr):
@@ -239,10 +265,13 @@ class PE(object):
                 return sh.VirtualAddress + offset
 
 
-    def getstr(self, offset, size=0, limit=0, save=True):
-        fp = self.fp
-        if save:
-            old_off = fp.tell()
+    def getstr(self, offset, size=0, isrva=False):
+        if not isrva:
+            fp = self.fp
+        else:
+            fp = self.mapped
+
+        save = fp.tell()
         fp.seek(offset)
 
         res = ""
@@ -253,15 +282,18 @@ class PE(object):
                 res += fp.read(1)
             res = res[:-1]
 
-        if save:
-            fp.seek(old_off)
+        fp.seek(save)
 
         return res
 
 
-    def getaddr(self, offset):
-        fp = self.fp
-        old_off = fp.tell()
+    def getaddr(self, offset, isrva=False):
+        if not isrva:
+            fp = self.fp
+        else:
+            fp = self.mapped
+
+        save = fp.tell()
 
         fmt, size = {
             32: ("<I", 4),
@@ -270,6 +302,6 @@ class PE(object):
         fp.seek(offset)
         res = unpack(fmt, fp.read(size))[0]
 
-        fp.seek(old_off)
+        fp.seek(save)
 
         return res
