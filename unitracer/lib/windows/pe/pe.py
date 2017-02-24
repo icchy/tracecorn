@@ -137,6 +137,16 @@ class PE(object):
         self.mapped = mapped
 
 
+    @property
+    def mapped_data(self):
+        fp = self.mapped
+        save = fp.tell()
+        fp.seek(0)
+        data = fp.read()
+        fp.seek(save)
+        return data
+
+
     # parse ENTRY_EXPORT
     def parse_export_directory(self):
         fp = self.mapped
