@@ -8,9 +8,9 @@ from capstone.x86_const import *
 
 from .unitracer import Unitracer
 from util import *
+from unitracer.lib.windows.pe import *
 
 import sys
-import pefile
 import struct
 import os
 
@@ -102,12 +102,12 @@ class Win32(Unitracer):
         dll_funcs = self.dll_funcs
 
         path = os.path.join("dll", dllname)
-        dll = pefile.PE(path, fast_load=True)
-        dll.parse_data_directories()
-        data = bytearray(dll.get_memory_mapped_image())
-        for ent in dll.DIRECTORY_ENTRY_EXPORT.symbols:
-            data[ent.address] = '\xc3' # ret
-            dll_funcs[base + ent.address] = ent.name
+        dll = PE(path)
+        data = bytearray(dll.mapped_data)
+        for name, addr in dll.exports.items():
+            print name
+            data[addr] = '\xc3'
+            dll_funcs[base + addr] = name
 
         return str(data)
 
