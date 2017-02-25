@@ -26,7 +26,7 @@ def test_pe():
 
 
 def test_uni():
-    uni = unitracer.Win32()
+    uni = unitracer.Windows()
     uni.load_code(open('./samples/Wincalc.sc').read())
     uni.start(0)
 

@@ -19,9 +19,7 @@ pck32 = p32
 upck32 = u32
 
 
-class Win32(Unitracer):
-    bits = 32
-
+class Windows(Unitracer):
     FS = 0x1000
     PEB_ADD = 0x3000
     TEB_ADD = 0x6000
@@ -41,11 +39,43 @@ class Win32(Unitracer):
     dll_funcs = {}
     hooks = {}
 
-    def __init__(self, mem_size = 15*1024*1024):
+    def __init__(self, os="Windows 7", bits=32, mem_size = 15*1024*1024):
+        self.bits = bits
+        self.os = os
+
+        self._init_os()
         self.emu = Uc(UC_ARCH_X86, UC_MODE_32)
         emu = self.emu
         emu.mem_map(self.FS, mem_size)
         self.emu_init(emu)
+
+
+    def _init_os(self):
+        bits = self.bits
+        os = self.os
+
+        self.PEB = {
+            "Windows NT"        : [PEB_NT,      None],
+            "Windows 2000"      : [PEB_2000,    None],
+            "Windows XP"        : [PEB_XP,      PEB_XP_64],
+            "Windows 2003"      : [PEB_2003,    PEB_2003_64],
+            "Windows 2003 R2"   : [PEB_2003_R2, PEB_2003_R2_64],
+            "Windows 2008"      : [PEB_2008,    PEB_2008_64],
+            "Windows 2008 R2"   : [PEB_2008_R2, PEB_2008_R2_64],
+            "Windows 7"         : [PEB_W7,      PEB_W7_64],
+        }[os][bits/64]
+
+        self.TEB = {
+            "Windows NT"        : [TEB_NT,      None],
+            "Windows 2000"      : [TEB_2000,    None],
+            "Windows XP"        : [TEB_XP,      TEB_XP_64],
+            "Windows 2003"      : [TEB_2003,    TEB_2003_64],
+            "Windows 2003 R2"   : [TEB_2003_R2, TEB_2003_R2_64],
+            "Windows 2008"      : [TEB_2008,    TEB_2008_64],
+            "Windows 2008 R2"   : [TEB_2008_R2, TEB_2008_R2_64],
+            "Windows 7"         : [TEB_W7,      TEB_W7_64],
+        }[os][bits/64]
+
 
 
     def emu_init(self, emu):
