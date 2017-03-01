@@ -48,9 +48,11 @@ class PE(object):
             IMAGE_NT_OPTIONAL_HDR64_MAGIC: 64,
         }[nt_header.OptionalHeader.Magic]
 
+        assert bits == 32, "currently 64bit binary is not supported"
+
         self.dos_header = dos_header
         self.bits = bits
-        self.isdll = nt_header.FileHeader.Characteristics & IMAGE_FILE_DLL
+        self.isdll = True if nt_header.FileHeader.Characteristics & IMAGE_FILE_DLL else False
 
 
     # parse header and directories
