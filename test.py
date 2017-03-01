@@ -10,10 +10,6 @@ def test_pe():
     addr = pe.exports[api]
     print api, hex(addr), addr==0xca06b
 
-    print "ntdll.dll"
-    pe = PE("./dll/ntdll.dll")
-    print "imagebase: 0x{0:x}".format(pe.imagebase)
-
     print "Downloader.exe"
     pe = PE("./samples/Downloader.exe")
     for dllname in pe.imports:
@@ -23,6 +19,15 @@ def test_pe():
 
     print "AntiDebug.exe"
     pe = PE("./samples/AntiDebug.exe")
+
+    print ""
+    pe = PE("../brezn/Brezelparadisebackmaschine.exe")
+    for dllname in pe.imports:
+        print dllname
+        for api, addr in pe.imports[dllname].items():
+            print api, hex(addr)
+        print ""
+
 
 
 def test_uni():
