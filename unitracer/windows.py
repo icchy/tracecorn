@@ -100,14 +100,13 @@ class Windows(Unitracer):
             # init Global Descriptor Table
             gdt = GDT_32(emu, self.GDT_BASE, self.GDT_SIZE)
 
-            flags = GDT_32.gdt_entry_flags(gr=1, sz=1, pr=0, privl=0, ex=0, dc=0, rw=1, ac=1) # 0xcf3
             # cs : 0x0023 (index:4)
-            flags = GDT_32.gdt_entry_flags(gr=1, sz=1, pr=1, privl=3, ex=1, dc=0, rw=1, ac=1) # 0xcfb
+            flags = GDT_32.gdt_entry_flags(gr=1, sz=1, pr=1, privl=3, ex=1, dc=0, rw=1, ac=1)
             selector = gdt.set_entry(4, 0x0, 0xffffffff, flags)
             emu.reg_write(UC_X86_REG_CS, selector)
 
             # ds, es, gs : 0x002b (index:5)
-            flags = GDT_32.gdt_entry_flags(gr=1, sz=1, pr=1, privl=3, ex=0, dc=0, rw=1, ac=1) # 0xcf3
+            flags = GDT_32.gdt_entry_flags(gr=1, sz=1, pr=1, privl=3, ex=0, dc=0, rw=1, ac=1)
             selector = gdt.set_entry(5, 0x0, 0xffffffff, flags)
             emu.reg_write(UC_X86_REG_DS, selector)
             emu.reg_write(UC_X86_REG_ES, selector)
