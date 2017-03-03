@@ -299,7 +299,9 @@ def MakeWideVersion(fn):
 # http://msdn.microsoft.com/en-us/library/aa383751(v=vs.85).aspx
 
 # Map of basic C types to Win32 types
-LPVOID      = ctypes.c_void_p
+# LPVOID      = ctypes.c_void_p
+LPVOID      = ctypes.c_uint32
+POINTER     = lambda x:ctypes.c_uint32
 CHAR        = ctypes.c_char
 WCHAR       = ctypes.c_wchar
 BYTE        = ctypes.c_ubyte
@@ -312,10 +314,10 @@ QWORD       = ctypes.c_uint64
 SQWORD      = ctypes.c_int64
 SHORT       = ctypes.c_short
 USHORT      = ctypes.c_ushort
-INT         = ctypes.c_int
-UINT        = ctypes.c_uint
-LONG        = ctypes.c_long
-ULONG       = ctypes.c_ulong
+INT         = ctypes.c_int32
+UINT        = ctypes.c_uint32
+LONG        = ctypes.c_int32
+ULONG       = ctypes.c_uint32
 LONGLONG    = ctypes.c_int64        # c_longlong
 ULONGLONG   = ctypes.c_uint64       # c_ulonglong
 LPSTR       = ctypes.c_char_p
@@ -646,16 +648,10 @@ class GUID(Structure):
 #     struct _LIST_ENTRY *Flink;
 #     struct _LIST_ENTRY *Blink;
 # } LIST_ENTRY, *PLIST_ENTRY, *RESTRICTED_POINTER PRLIST_ENTRY;
-# class LIST_ENTRY(Structure):
-#     _fields_ = [
-#         ("Flink",   PVOID),     # POINTER(LIST_ENTRY)
-#         ("Blink",   PVOID),     # POINTER(LIST_ENTRY)
-# ]
 class LIST_ENTRY(Structure):
-    pass
-LIST_ENTRY._fields_ = [
-    ("Flink",   POINTER(LIST_ENTRY)),
-    ("Blink",   POINTER(LIST_ENTRY)),
+    _fields_ = [
+        ("Flink",   PVOID),     # POINTER(LIST_ENTRY)
+        ("Blink",   PVOID),     # POINTER(LIST_ENTRY)
 ]
 
 #==============================================================================
