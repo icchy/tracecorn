@@ -6,7 +6,7 @@ from capstone import *
 from capstone.x86_const import *
 
 from .unitracer import Unitracer
-from .lib.util import *
+from unitracer.lib.util import *
 from unitracer.lib.windows.pe import *
 from unitracer.lib.windows.i386 import *
 
@@ -125,7 +125,7 @@ class Windows(Unitracer):
             self.gdt = gdt
 
 
-    def _init_ldr(self, dlls=None):
+    def _init_ldr(self, dlls=None, exe_ldr=None):
         emu = self.emu
         containsPE = False
 
@@ -144,8 +144,9 @@ class Windows(Unitracer):
             pe = PE(dll)
 
             dllbase = self.load_dll(dll)
-            fulldllname = "C:\\Windows\\System32\\{}".format(dll).encode("UTF-16LE")
-            basedllname = dll.encode("UTF-16LE")
+            dll_name = os.path.basename(dll)
+            fulldllname = "C:\\Windows\\System32\\{}".format(dll_name).encode("UTF-16LE")
+            basedllname = dll_name.encode("UTF-16LE")
 
             ldr_module = LDR_MODULE()
 
@@ -165,6 +166,9 @@ class Windows(Unitracer):
             ldr_module.BaseDllName.Buffer = self._alloc(len(basedllname)+2)
 
             ldrs.append(ldr_module)
+
+        if exe_ldr:
+            ldrs.insert(0, exe_ldr)
 
         # setup PEB_LDR_DATA
         ldr_data = PEB_LDR_DATA()
@@ -195,7 +199,6 @@ class Windows(Unitracer):
         ldrs[0].InInitializationOrderModuleList.Blink = ldr_data.addr+0x1c
         ldrs[-1].InInitializationOrderModuleList.Flink = ldr_data.addr+0x1c
 
-
         # write data
         emu.mem_map(self.PEB_LDR_ADDR, align(sizeof(ldr_data)))
         emu.mem_write(self.PEB_LDR_ADDR, struct2str(ldr_data))
@@ -217,7 +220,6 @@ class Windows(Unitracer):
         emu = self.emu
         base = self.DLL_CUR
         dllname = os.path.basename(path)
-
         dlldata = self._load_dll(path, base)
         size = align(len(dlldata))
         emu.mem_map(base, size)
@@ -230,14 +232,15 @@ class Windows(Unitracer):
         return base
 
 
-    def _load_dll(self, path, base):
+    def _load_dll(self, path, base, analysis=True):
         dll_funcs = self.dll_funcs
 
         dll = PE(path)
         data = bytearray(dll.mapped_data)
+
         for name, addr in dll.exports.items():
             data[addr] = '\xc3'
-            dll_funcs[base + addr] = name
+            dll_funcs[name] = base + addr
 
         return str(data)
 
@@ -249,29 +252,28 @@ class Windows(Unitracer):
         md = Cs(CS_ARCH_X86, CS_MODE_32)
         code = uc.mem_read(address, size)
         asm = md.disasm(str(code), address)
-        eip = uc.reg_read(UC_X86_REG_EIP)
-        self.eip = eip
 
-        eax = uc.reg_read(UC_X86_REG_EAX)
-        ebx = uc.reg_read(UC_X86_REG_EBX)
-        ecx = uc.reg_read(UC_X86_REG_ECX)
-        edx = uc.reg_read(UC_X86_REG_EDX)
-        edi = uc.reg_read(UC_X86_REG_EDI)
-        esi = uc.reg_read(UC_X86_REG_ESI)
+        # eax = uc.reg_read(UC_X86_REG_EAX)
+        # ebx = uc.reg_read(UC_X86_REG_EBX)
+        # ecx = uc.reg_read(UC_X86_REG_ECX)
+        # edx = uc.reg_read(UC_X86_REG_EDX)
+        # edi = uc.reg_read(UC_X86_REG_EDI)
+        # esi = uc.reg_read(UC_X86_REG_ESI)
         esp = uc.reg_read(UC_X86_REG_ESP)
-        ebp = uc.reg_read(UC_X86_REG_EBP)
-        print("eax: 0x{0:08x}".format(eax))
-        print("ebx: 0x{0:08x}".format(ebx))
-        print("edx: 0x{0:08x}".format(edx))
-        print("esi: 0x{0:08x}".format(esi))
+        # ebp = uc.reg_read(UC_X86_REG_EBP)
+        # print("eax: 0x{0:08x}".format(eax))
+        # print("ebx: 0x{0:08x}".format(ebx))
+        # print("edx: 0x{0:08x}".format(edx))
+        # print("esi: 0x{0:08x}".format(esi))
 
         for a in asm:
             print('0x%x: \t%s\t%s' % (a.address, a.mnemonic, a.op_str))
 
-        if eip in dll_funcs:
-            func = dll_funcs[eip]
+        if address in dll_funcs.values():
+            func = {v:k for k, v in dll_funcs.items()}[address]
+            print func
             if func in hooks.keys():
-                hooks[func](eip, esp, uc)
+                hooks[func].hook(address, esp, uc)
             else:
                 print("unhooked function: {}".format(func))
 
@@ -304,20 +306,49 @@ class Windows(Unitracer):
     def load_pe(self, fname):
         emu = self.emu
         ADDRESS = self.ADDRESS
+        dll_funcs = self.dll_funcs
 
         pe = PE(fname)
         dlls = pe.imports.keys()
 
         self.STACK_SIZE = pe.stacksize
+        
+        exe_ldr = LDR_MODULE()
+        pe_name = os.path.basename(fname)
+        fulldllname = "C:\\Users\\victim\\{}".format(pe_name).encode("UTF-16LE")
+        basedllname = pe_name.encode("UTF-16LE")
 
-        self._init_ldr(map(lambda x:"dll/"+x, dlls))
+        exe_ldr.addr = self._alloc(sizeof(exe_ldr))
+        exe_ldr.fulldllname = fulldllname
+        exe_ldr.basedllname = basedllname
+
+        exe_ldr.BaseAddress = ADDRESS
+        exe_ldr.EntryPoint = pe.entrypoint
+        exe_ldr.SizeOfImage = pe.imagesize
+
+        exe_ldr.FullDllName.Length = len(fulldllname)
+        exe_ldr.FullDllName.MaximumLength = len(fulldllname)+2
+        exe_ldr.FullDllName.Buffer = self._alloc(len(fulldllname)+2)
+        exe_ldr.BaseDllName.Length = len(basedllname)
+        exe_ldr.BaseDllName.MaximumLength = len(basedllname)+2
+        exe_ldr.BaseDllName.Buffer = self._alloc(len(basedllname)+2)
+
+        self._init_ldr(map(lambda x:"dll/"+x, dlls), exe_ldr)
         self._init_process()
 
+        # rewrite IAT
+        data = bytearray(pe.mapped_data)
+        for dllname in pe.imports:
+            for api, addr in pe.imports[dllname].items():
+                overwritten = False
+                if api in dll_funcs:
+                    offset = addr - pe.imagebase
+                    data[offset:offset+4] = p32(dll_funcs[api])
+        data = str(data)
+
         # map PE
-        data = pe.mapped_data
         emu.mem_map(ADDRESS, align(len(data)))
         emu.mem_write(ADDRESS, data)
-        emu.reg_write(UC_X86_REG_EIP, ADDRESS)
         self.size = len(data)
         self.entry = ADDRESS + pe.entrypoint
 
@@ -349,7 +380,7 @@ class Windows(Unitracer):
             esi = emu.reg_read(UC_X86_REG_ESI)
             esp = emu.reg_read(UC_X86_REG_ESP)
             ebp = emu.reg_read(UC_X86_REG_EBP)
-            eip = self.eip
+            eip = emu.reg_read(UC_X86_REG_EIP)
             print("eax: 0x{0:08x}".format(eax))
             print("ebx: 0x{0:08x}".format(ebx))
             print("ecx: 0x{0:08x}".format(ecx))
