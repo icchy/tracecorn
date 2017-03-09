@@ -46,6 +46,8 @@ class Windows(Unitracer):
         assert bits == 32, "currently only 32 bit is supported"
 
         self.emu = Uc(UC_ARCH_X86, UC_MODE_32)
+        cs = Cs(CS_ARCH_X86, CS_MODE_32)
+        self.cs = cs
 
 
     def _init_process(self):
@@ -248,30 +250,16 @@ class Windows(Unitracer):
     def _hook_code(self, uc, address, size, userdata):
         hooks = self.hooks
         dll_funcs = self.dll_funcs
+        cs = self.cs
 
-        md = Cs(CS_ARCH_X86, CS_MODE_32)
         code = uc.mem_read(address, size)
-        asm = md.disasm(str(code), address)
+        for insn in cs.disasm(str(code), address):
+            print('0x{0:08x}: \t{1}\t{2}'.format(insn.address, insn.mnemonic, insn.op_str))
 
-        # eax = uc.reg_read(UC_X86_REG_EAX)
-        # ebx = uc.reg_read(UC_X86_REG_EBX)
-        # ecx = uc.reg_read(UC_X86_REG_ECX)
-        # edx = uc.reg_read(UC_X86_REG_EDX)
-        # edi = uc.reg_read(UC_X86_REG_EDI)
-        # esi = uc.reg_read(UC_X86_REG_ESI)
         esp = uc.reg_read(UC_X86_REG_ESP)
-        # ebp = uc.reg_read(UC_X86_REG_EBP)
-        # print("eax: 0x{0:08x}".format(eax))
-        # print("ebx: 0x{0:08x}".format(ebx))
-        # print("edx: 0x{0:08x}".format(edx))
-        # print("esi: 0x{0:08x}".format(esi))
-
-        for a in asm:
-            print('0x%x: \t%s\t%s' % (a.address, a.mnemonic, a.op_str))
 
         if address in dll_funcs.values():
             func = {v:k for k, v in dll_funcs.items()}[address]
-            print func
             if func in hooks.keys():
                 hooks[func].hook(address, esp, uc)
             else:
@@ -372,21 +360,4 @@ class Windows(Unitracer):
             emu.emu_start(entry, entry + self.size)
         except UcError as e:
             print("ERROR: %s" % e)
-            eax = emu.reg_read(UC_X86_REG_EAX)
-            ebx = emu.reg_read(UC_X86_REG_EBX)
-            ecx = emu.reg_read(UC_X86_REG_ECX)
-            edx = emu.reg_read(UC_X86_REG_EDX)
-            edi = emu.reg_read(UC_X86_REG_EDI)
-            esi = emu.reg_read(UC_X86_REG_ESI)
-            esp = emu.reg_read(UC_X86_REG_ESP)
-            ebp = emu.reg_read(UC_X86_REG_EBP)
-            eip = emu.reg_read(UC_X86_REG_EIP)
-            print("eax: 0x{0:08x}".format(eax))
-            print("ebx: 0x{0:08x}".format(ebx))
-            print("ecx: 0x{0:08x}".format(ecx))
-            print("edx: 0x{0:08x}".format(edx))
-            print("edi: 0x{0:08x}".format(edi))
-            print("esi: 0x{0:08x}".format(esi))
-            print("esp: 0x{0:08x}".format(esp))
-            print("ebp: 0x{0:08x}".format(ebp))
-            print("eip: 0x{0:08x}".format(eip))
+            self.dumpregs(["eax", "ebx", "ecx", "edx", "edi", "esi", "esp", "ebp", "eip"])

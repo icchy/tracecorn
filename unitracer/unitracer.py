@@ -22,6 +22,23 @@ class Unitracer(object):
     def packstr(self, s):
         return s.split("\x00", 1)[0]
 
+    def dumpregs(self, regs):
+        regmap = {
+            'ax': [UC_X86_REG_EAX, UC_X86_REG_RAX],
+            'bx': [UC_X86_REG_EBX, UC_X86_REG_RBX],
+            'cx': [UC_X86_REG_ECX, UC_X86_REG_RCX],
+            'dx': [UC_X86_REG_EDX, UC_X86_REG_RDX],
+            'di': [UC_X86_REG_EDI, UC_X86_REG_RDI],
+            'si': [UC_X86_REG_ESI, UC_X86_REG_RSI],
+            'bp': [UC_X86_REG_EBP, UC_X86_REG_RBP],
+            'sp': [UC_X86_REG_ESP, UC_X86_REG_RSP],
+            'ip': [UC_X86_REG_EIP, UC_X86_REG_RIP],
+        }
+        for reg in regs:
+            uc_reg = regmap[reg[1:]][self.bits/64]
+            val = self.emu.reg_read(uc_reg)
+            print(("{0}: 0x{1:0"+str(self.bits/4)+"x}").format(reg, val))
+
     def emu_init(self):
         raise NotImplementedError
 
