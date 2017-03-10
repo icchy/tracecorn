@@ -226,7 +226,6 @@ class Windows(Unitracer):
         dll_path = self.dll_path
         path = None
         for d in dll_path:
-            print d
             p = os.path.join(d, dllname)
             if os.path.exists(p):
                 path = p
