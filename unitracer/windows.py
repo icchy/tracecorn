@@ -38,7 +38,8 @@ class Windows(Unitracer):
 
     dlls = []
     dll_funcs = {}
-    hooks = {}
+    api_hooks = {}
+    hooks = []
     dll_path = [os.path.join('unitracer', 'lib', 'windows', 'dll')]
 
 
@@ -268,32 +269,36 @@ class Windows(Unitracer):
 
 
     def _hook_code(self, uc, address, size, userdata):
+        api_hooks = self.api_hooks
         hooks = self.hooks
         dll_funcs = self.dll_funcs
         cs = self.cs
 
+        for hook in hooks:
+            hook(self, address, size, userdata)
+
         code = uc.mem_read(address, size)
-        # for insn in cs.disasm(str(code), address):
-        #     print('0x{0:08x}: \t{1}\t{2}'.format(insn.address, insn.mnemonic, insn.op_str))
+        for insn in cs.disasm(str(code), address):
+            print('0x{0:08x}: \t{1}\t{2}'.format(insn.address, insn.mnemonic, insn.op_str))
 
         esp = uc.reg_read(UC_X86_REG_ESP)
 
         if address in dll_funcs.values():
             func = {v:k for k, v in dll_funcs.items()}[address]
-            if func in hooks.keys():
-                if hasattr(hooks[func], 'hook'):
-                    hooks[func].hook(address, esp, self)
+            if func in api_hooks.keys():
+                if hasattr(api_hooks[func], 'hook'):
+                    api_hooks[func].hook(address, esp, self)
                 else:
-                    hooks[func](address, esp, self)
+                    api_hooks[func](address, esp, self)
             else:
                 print("unregistered function: {}".format(func))
 
     def _load_hooks(self):
-        _hooks = self.hooks
+        api_hooks = self.api_hooks
         m = unitracer.lib.windows.hooks
         for n in m.hooks:
-            _hooks[n] = getattr(m, n)
-        self.hooks = _hooks
+            api_hooks[n] = getattr(m, n)
+        self.api_hooks = api_hooks
 
 
     def load_code(self, data):

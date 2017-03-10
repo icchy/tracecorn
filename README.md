@@ -16,8 +16,8 @@ Windows API tracer for malware
 ## Usage
 ```python
 import unitracer
-
 from unicorn import x86_const
+
 
 uni = unitracer.Windows()
 
@@ -32,15 +32,23 @@ uni.STACK_SIZE = 0x10000
 uni.load_pe('./samples/AntiDebug.exe')
 # uni.load_code(open('./samples/URLDownloadToFile.sc').read())
 
-# add hooks
+# add api hooks
 def IsDebuggerPresent(ip, sp, ut):
   emu = ut.emu
-  eip_saved = ut.getstack(sp)
+  retaddr = ut.popstack()
   print "IsDebuggerPresent"
   emu.reg_write(UC_X86_REG_EAX, 0)
-  emu.mem_write(esp, ut.pack(eip_saved))
+  ut.pushstack(retaddr)
 
-uni.hooks['IsDebuggerPresent'] = IsDebuggerPresent
+uni.api_hooks['IsDebuggerPresent'] = IsDebuggerPresent
+
+# add original hooks
+def myhook(ut, address, size, userdata):
+  emu = ut.emu
+  if address == 0xdeadbeef:
+    ut.dumpregs(["eax", "ebx"])
+
+uni.hooks.append(myhook)
 
 uni.start(0)
 ```
