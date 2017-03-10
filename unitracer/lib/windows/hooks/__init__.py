@@ -469,7 +469,8 @@ for f in filter(lambda x:not os.path.isdir(x), os.listdir(os.path.dirname(__file
         continue
     m = importlib.import_module(".".join(['unitracer', 'lib', 'windows', 'hooks', f[:-3]]))
     for n in filter(lambda x:not x[:2] == x[-2:] == '__', dir(m)):
-        globals()[n] = getattr(m, n)
+        globals()[n] = Hook(None, None)
+        globals()[n].hook = getattr(m, n)
 
 
 hooks = set(vars().keys()).difference(hooks)
