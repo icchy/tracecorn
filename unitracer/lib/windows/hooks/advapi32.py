@@ -28,7 +28,7 @@ def RegSetValueExA(ip, sp, ut):
             if getattr(advapi32, n) == dwType:
                 dwType_s = n
 
-    print '0x{0:08x}: RegSetValueExA (hKey=0x{1:x}, lpValueName="{2}", dwType="{3}", lpData="{4}", cbData={5})'.format(ip, hKey, ut.getstr(lpValueName), dwType_s, ut.getstr(lpData), cbData)
+    print '0x{0:08x}: RegSetValueExA (hKey=0x{1:x}, lpValueName="{2}", dwType={3}, lpData="{4}", cbData={5})'.format(ip, hKey, ut.getstr(lpValueName), dwType_s, ut.getstr(lpData), cbData)
     ut.emu.reg_write(UC_X86_REG_EAX, 0)
     ut.pushstack(retaddr)
 

@@ -56,8 +56,10 @@ def test_pe():
 
 def test_uni():
     uni = unitracer.Windows()
-    # uni.load_code(open('./samples/Wincalc.sc').read())
-    uni.load_pe('./samples/Downloader.exe')
+    # uni.STACK_BASE = 0x50000000
+    # uni.STACK_SIZE = 0x1000000
+    uni.load_code(open('./samples/URLDownloadToFile.sc').read())
+    # uni.load_pe('./samples/AntiDebug.exe')
     uni.start(0)
 
 # test_pe() 

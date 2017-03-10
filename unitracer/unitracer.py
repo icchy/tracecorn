@@ -46,7 +46,11 @@ class Unitracer(object):
         return s.split("\x00", 1)[0]
 
     def getstr(self, addr, size=100):
-        data = self.emu.mem_read(addr, size)
+        data = ""
+        for i in range(size):
+            data += self.emu.mem_read(addr+i, 1)
+            if data.endswith('\x00'):
+                break
         return self.packstr(data)
 
     def setSP(self, val):
