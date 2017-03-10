@@ -79,6 +79,3 @@ class GDT_32(object):
 
         emu.mem_write(gdt_base+index*8, self._gdt_entry(base, limit, flags))
         return self._seg_selector(index, ti, rpl)
-
-
-__all__ = vars().keys()
