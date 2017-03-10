@@ -47,7 +47,7 @@ uni.start(0)
 
 ## Sample
  * running `samples/URLDownloadToFile.sc`
- ![sample](http://imgur.com/AHzR1ZJ)
+ ![sample](http://imgur.com/AHzR1ZJ.png)
 
 ## TODO
  * 64 bit
