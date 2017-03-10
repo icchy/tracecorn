@@ -31,3 +31,12 @@ def ExitProcess(ip, sp, ut):
 
     print '0x{0:08x}: ExitProcess ({1})'.format(ip, uExitCode)
     ut.pushstack(retaddr)
+
+
+def IsDebuggerPresent(ip, sp, ut):
+    retaddr = ut.popstack()
+    res = 0
+
+    print '0x{0:08x}: IsDebuggerPresent = {1}'.format(ip, res)
+    ut.emu.reg_write(UC_X86_REG_EAX, res)
+    ut.pushstack(retaddr)
