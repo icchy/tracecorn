@@ -1,14 +1,39 @@
-from i386 import *
+from ..i386 import *
 from ctypes import *
+from unicorn.x86_const import *
+import importlib
+import os
+
 
 class Hook(object):
     def __init__(self, restype, argtypes):
         self.restype = restype
         self.argtypes = argtypes
 
-    def hook(self, ip, sp, emu):
-        print("Unhooked function: {}".format(self.__name__))
+    def hook(self, ip, sp, ut):
+        name = filter(lambda x:x[1]==self, ut.hooks.items())[0][0]
+        args = []
+        retaddr = ut.getstack(sp)
+        idx = 0
+        for argtype in self.argtypes:
+            val = ut.getstack(sp+idx*(ut.bits/8))
+            if argtype in [c_char_p, c_wchar_p]:
+                if val == 0:
+                    args.append("0x{0:08x}".format(val))
+                else:
+                    args.append('"{}"'.format(ut.getstr(val)))
+            else:
+                args.append("0x{0:08x}".format(val))
+            idx += 1
+        print("Unhooked function: {} ({})".format(name, ', '.join(args)))
+        offset = idx*(ut.bits/8)
+        # ut.setSP(sp + offset)
+        # ut.emu.mem_write(sp + offset, retaddr)
 
+
+hooks = set(vars().keys())
+
+# default hook types
 
 GetUserNameA = Hook(BOOL, [LPSTR, LPDWORD])
 GetUserNameW = Hook(BOOL, [LPWSTR, LPDWORD])
@@ -435,3 +460,17 @@ WTSEnumerateProcessesW = Hook(BOOL, [HANDLE, DWORD, DWORD, POINTER(PWTS_PROCESS_
 WTSTerminateProcess = Hook(BOOL, [HANDLE, DWORD, DWORD])
 ProcessIdToSessionId = Hook(BOOL, [DWORD, PDWORD])
 WTSGetActiveConsoleSessionId = Hook(DWORD, [])
+
+
+# load defined hooks
+
+for f in filter(lambda x:not os.path.isdir(x), os.listdir(os.path.dirname(__file__))):
+    if not f.endswith('.py') or f == '__init__.py':
+        continue
+    m = importlib.import_module(".".join(['unitracer', 'lib', 'windows', 'hooks', f[:-3]]))
+    for n in filter(lambda x:not x[:2] == x[-2:] == '__', dir(m)):
+        globals()[n] = getattr(m, n)
+
+
+hooks = set(vars().keys()).difference(hooks)
+hooks = [_x for _x in hooks if not _x.startswith('_')]

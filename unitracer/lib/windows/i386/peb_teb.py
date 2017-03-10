@@ -3427,6 +3427,37 @@ class TEB(Structure):
         _fields_ = _TEB_W7_64._fields_
 PTEB = POINTER(TEB)
 
+_vers = [
+    "NT",
+    "2000",
+    "XP",
+    "2003", "2003_R2",
+    "2008", "2008_R2",
+    "W7",
+]
+# export PEB
+for _v in _vers:
+    _name = "PEB_{}".format(_v)
+    _pname = "_"+_name
+    if _pname in vars():
+        vars()[_name] = vars()[_pname]
+    _name += "_64"
+    _pname += "_64"
+    if _pname in vars():
+        vars()[_name] = vars()[_pname]
+
+# export TEB
+for _v in _vers:
+    _name = "TEB_{}".format(_v)
+    _pname = "_"+_name
+    if _pname in vars():
+        vars()[_name] = vars()[_pname]
+    _name += "_64"
+    _pname += "_64"
+    if _pname in vars():
+        vars()[_name] = vars()[_pname]
+
+
 #==============================================================================
 # This calculates the list of exported symbols.
 _all = set(vars().keys()).difference(_all)

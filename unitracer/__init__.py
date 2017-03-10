@@ -1,3 +1,5 @@
-from win32 import Win32
+from __future__ import absolute_import
 
-__all__ = ["Win32"]
+from .windows import Windows
+
+__all__ = ["Windows"]

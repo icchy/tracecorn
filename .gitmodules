@@ -1,0 +1,3 @@
+[submodule "unitracer/lib/windows/pe"]
+	path = unitracer/lib/windows/pe
+	url = https://github.com/icchy/pe
