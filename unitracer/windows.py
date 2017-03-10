@@ -215,6 +215,9 @@ class Windows(Unitracer):
             emu.mem_write(ldr_module.BaseDllName.Buffer, ldr_module.basedllname)
             emu.mem_write(ldr_module.addr, struct2str(ldr_module))
 
+        self.ldr_data = ldr_data
+        self.ldrs = ldrs
+
 
     def _alloc(self, size):
         ret = self.HEAP_CUR
@@ -270,15 +273,18 @@ class Windows(Unitracer):
         cs = self.cs
 
         code = uc.mem_read(address, size)
-        for insn in cs.disasm(str(code), address):
-            print('0x{0:08x}: \t{1}\t{2}'.format(insn.address, insn.mnemonic, insn.op_str))
+        # for insn in cs.disasm(str(code), address):
+        #     print('0x{0:08x}: \t{1}\t{2}'.format(insn.address, insn.mnemonic, insn.op_str))
 
         esp = uc.reg_read(UC_X86_REG_ESP)
 
         if address in dll_funcs.values():
             func = {v:k for k, v in dll_funcs.items()}[address]
             if func in hooks.keys():
-                hooks[func].hook(address, esp, self)
+                if hasattr(hooks[func], 'hook'):
+                    hooks[func].hook(address, esp, self)
+                else:
+                    hooks[func](address, esp, self)
             else:
                 print("unregistered function: {}".format(func))
 
@@ -308,6 +314,7 @@ class Windows(Unitracer):
         STACK_BASE = self.STACK_BASE
         STACK_SIZE = self.STACK_SIZE
         emu.mem_map(STACK_BASE - STACK_SIZE, align(STACK_SIZE))
+        print("stack: 0x{0:08x}-0x{1:08x}".format(STACK_BASE - STACK_SIZE, STACK_BASE))
         emu.reg_write(UC_X86_REG_ESP, STACK_BASE)
         emu.reg_write(UC_X86_REG_EBP, STACK_BASE)
 
