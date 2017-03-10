@@ -467,8 +467,7 @@ WTSGetActiveConsoleSessionId = Hook(DWORD, [])
 for f in filter(lambda x:not os.path.isdir(x), os.listdir(os.path.dirname(__file__))):
     if not f.endswith('.py') or f == '__init__.py':
         continue
-    print f[:-3]
-    m = importlib.import_module(f[:-3])
+    m = importlib.import_module(".".join(['unitracer', 'lib', 'windows', 'hooks', f[:-3]]))
     for n in filter(lambda x:not x[:2] == x[-2:] == '__', dir(m)):
         globals()[n] = getattr(m, n)
 
