@@ -31,6 +31,17 @@ class Unitracer(object):
         data = self.emu.mem_read(esp, self.bits/8)
         return self.unpack(data)
 
+    def popstack(self):
+        esp = self.emu.reg_read(self.regmap['sp'][self.bits/64])
+        data = self.getstack(esp)
+        self.emu.reg_write(self.regmap['sp'][self.bits/64], esp+4)
+        return data
+
+    def pushstack(self, data):
+        esp = self.emu.reg_read(self.regmap['sp'][self.bits/64])
+        self.emu.reg_write(self.regmap['sp'][self.bits/64], esp-4)
+        self.emu.mem_write(esp-4, self.pack(data))
+
     def packstr(self, s):
         return s.split("\x00", 1)[0]
 
