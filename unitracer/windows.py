@@ -9,6 +9,7 @@ from .unitracer import Unitracer
 from unitracer.lib.util import *
 from unitracer.lib.windows.pe import *
 from unitracer.lib.windows.i386 import *
+import unitracer.lib.windows.hooks
 
 import sys
 import struct
@@ -38,6 +39,8 @@ class Windows(Unitracer):
     dlls = []
     dll_funcs = {}
     hooks = {}
+    dll_path = [os.path.join('unitracer', 'lib', 'windows', 'dll')]
+
 
     def __init__(self, os="Windows 7", bits=32, mem_size = 15*1024*1024):
         self.bits = bits
@@ -48,6 +51,7 @@ class Windows(Unitracer):
         self.emu = Uc(UC_ARCH_X86, UC_MODE_32)
         cs = Cs(CS_ARCH_X86, CS_MODE_32)
         self.cs = cs
+        self._load_hooks()
 
 
     def _init_process(self):
@@ -140,10 +144,11 @@ class Windows(Unitracer):
         # create LDR_DATA_TABLE_ENTRY
         ldrs = []
         for dll in dlls:
-            if not os.path.exists(dll):
-                print >> sys.stderr, "{} does not exist".format(dll)
+            dllpath = self._find_dll(dll)
+            if not dllpath:
+                raise IOError, "{} does not exist".format(dll)
 
-            pe = PE(dll)
+            pe = PE(dllpath)
 
             dllbase = self.load_dll(dll)
             dll_name = os.path.basename(dll)
@@ -217,11 +222,24 @@ class Windows(Unitracer):
         return ret
 
 
-    def load_dll(self, path):
+    def _find_dll(self, dllname):
+        dll_path = self.dll_path
+        path = None
+        for d in dll_path:
+            print d
+            p = os.path.join(d, dllname)
+            if os.path.exists(p):
+                path = p
+                break
+        return path
+
+
+    def load_dll(self, dllname):
         dlls = self.dlls
         emu = self.emu
         base = self.DLL_CUR
-        dllname = os.path.basename(path)
+
+        path = self._find_dll(dllname)
         dlldata = self._load_dll(path, base)
         size = align(len(dlldata))
         emu.mem_map(base, size)
@@ -261,9 +279,16 @@ class Windows(Unitracer):
         if address in dll_funcs.values():
             func = {v:k for k, v in dll_funcs.items()}[address]
             if func in hooks.keys():
-                hooks[func].hook(address, esp, uc)
+                hooks[func].hook(address, esp, self)
             else:
-                print("unhooked function: {}".format(func))
+                print("unregistered function: {}".format(func))
+
+    def _load_hooks(self):
+        _hooks = self.hooks
+        m = unitracer.lib.windows.hooks
+        for n in m.hooks:
+            _hooks[n] = getattr(m, n)
+        self.hooks = _hooks
 
 
     def load_code(self, data):
@@ -272,7 +297,7 @@ class Windows(Unitracer):
 
         self.size = len(data)
         self.entry = self.ADDRESS + 0
-        self._init_ldr(["dll/ntdll.dll", "dll/ntdll.dll", "dll/kernel32.dll"])
+        self._init_ldr(["ntdll.dll", "ntdll.dll", "kernel32.dll"])
         self._init_process()
 
         # map shellcode
@@ -321,7 +346,7 @@ class Windows(Unitracer):
         exe_ldr.BaseDllName.MaximumLength = len(basedllname)+2
         exe_ldr.BaseDllName.Buffer = self._alloc(len(basedllname)+2)
 
-        self._init_ldr(map(lambda x:"dll/"+x, dlls), exe_ldr)
+        self._init_ldr(dlls, exe_ldr)
         self._init_process()
 
         # rewrite IAT
