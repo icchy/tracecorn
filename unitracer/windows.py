@@ -42,6 +42,8 @@ class Windows(Unitracer):
     hooks = []
     dll_path = [os.path.join('unitracer', 'lib', 'windows', 'dll')]
 
+    verbose = True
+
 
     def __init__(self, os="Windows 7", bits=32, mem_size = 15*1024*1024):
         self.bits = bits
@@ -277,9 +279,10 @@ class Windows(Unitracer):
         for hook in hooks:
             hook(self, address, size, userdata)
 
-        code = uc.mem_read(address, size)
-        for insn in cs.disasm(str(code), address):
-            print('0x{0:08x}: \t{1}\t{2}'.format(insn.address, insn.mnemonic, insn.op_str))
+        if self.verbose:
+            code = uc.mem_read(address, size)
+            for insn in cs.disasm(str(code), address):
+                print('0x{0:08x}: \t{1}\t{2}'.format(insn.address, insn.mnemonic, insn.op_str))
 
         esp = uc.reg_read(UC_X86_REG_ESP)
 
