@@ -16,13 +16,13 @@ Windows API tracer for malware
 ## Usage
 ```python
 import unitracer
-from unicorn import x86_const
+from unicorn.x86_const import *
 
 
 uni = unitracer.Windows()
 
-# add dll path
-uni.dll_path.insert(0, "dlls") # search priority is greater than default
+# add search path for dll
+uni.dll_path.insert(0, "dlls")
 
 # change stack
 uni.STACK_BASE = 0x60000000
@@ -34,28 +34,30 @@ uni.load_pe('./samples/AntiDebug.exe')
 
 # add api hooks
 def IsDebuggerPresent(ip, sp, ut):
-  emu = ut.emu
-  retaddr = ut.popstack()
-  print "IsDebuggerPresent"
-  emu.reg_write(UC_X86_REG_EAX, 0)
-  ut.pushstack(retaddr)
+    emu = ut.emu
+    retaddr = ut.popstack()
+    print "IsDebuggerPresent"
+    emu.reg_write(UC_X86_REG_EAX, 0)
+    ut.pushstack(retaddr)
 
 uni.api_hooks['IsDebuggerPresent'] = IsDebuggerPresent
 
 # add original hooks
 def myhook(ut, address, size, userdata):
-  emu = ut.emu
-  if address == 0xdeadbeef:
-    ut.dumpregs(["eax", "ebx"])
+    if address == 0xdeadbeef:
+        ut.dumpregs(["eax", "ebx"])
 
 uni.hooks.append(myhook)
+
+# suppress verbose output (disassemble)
+uni.verbose = False
 
 uni.start(0)
 ```
 
 ## Sample
  * running `samples/URLDownloadToFile.sc`
- ![sample](http://imgur.com/a/600An)
+ ![sample](http://imgur.com/AHzR1ZJ.png)
 
 ## TODO
  * 64 bit
