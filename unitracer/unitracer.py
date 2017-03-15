@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 from .lib.util import *
 
 class Unitracer(object):

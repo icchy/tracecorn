@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 from unicorn import *
 from unicorn.x86_const import *
 from capstone import *
@@ -9,7 +7,7 @@ from .unitracer import Unitracer
 from .lib.util import *
 from .lib.windows.pe import *
 from .lib.windows.i386 import *
-import unitracer.lib.windows.hooks
+from .lib.windows import hooks as m_hooks
 
 import sys
 import struct
@@ -300,9 +298,8 @@ class Windows(Unitracer):
 
     def _load_hooks(self):
         api_hooks = self.api_hooks
-        m = unitracer.lib.windows.hooks
-        for n in m.hooks:
-            api_hooks[n] = getattr(m, n)
+        for n in m_hooks.hooks:
+            api_hooks[n] = getattr(m_hooks, n)
         self.api_hooks = api_hooks
 
 
