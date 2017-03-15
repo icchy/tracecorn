@@ -1,4 +1,7 @@
+from unicorn.x86_const import *
+
 from .lib.util import *
+
 
 class Unitracer(object):
     regmap = {

@@ -5,9 +5,12 @@ from capstone.x86_const import *
 
 from .unitracer import Unitracer
 from .lib.util import *
-from .lib.windows.pe import *
+from .lib.segment import GDT_32
+from .lib.windows.pe import PE
 from .lib.windows.i386 import *
 from .lib.windows import hooks as m_hooks
+
+from ctypes import sizeof
 
 import sys
 import struct
