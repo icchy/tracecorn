@@ -6,9 +6,9 @@ from capstone import *
 from capstone.x86_const import *
 
 from .unitracer import Unitracer
-from unitracer.lib.util import *
-from unitracer.lib.windows.pe import *
-from unitracer.lib.windows.i386 import *
+from .lib.util import *
+from .lib.windows.pe import *
+from .lib.windows.i386 import *
 import unitracer.lib.windows.hooks
 
 import sys
@@ -47,6 +47,8 @@ class Windows(Unitracer):
 
     def __init__(self, os="Windows 7", bits=32, mem_size = 15*1024*1024):
         self.bits = bits
+        self.bytes = bits/8
+        self.is64 = True if bits == 64 else False
         self.os = os
 
         assert bits == 32, "currently only 32 bit is supported"
