@@ -1,6 +1,7 @@
-from ..i386 import *
-from ctypes import *
 from unicorn.x86_const import *
+from ..i386 import *
+
+from ctypes import *
 import importlib
 import os
 

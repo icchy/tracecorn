@@ -1,15 +1,16 @@
-from __future__ import absolute_import
-
 from unicorn import *
 from unicorn.x86_const import *
 from capstone import *
 from capstone.x86_const import *
 
 from .unitracer import Unitracer
-from unitracer.lib.util import *
-from unitracer.lib.windows.pe import *
-from unitracer.lib.windows.i386 import *
-import unitracer.lib.windows.hooks
+from .lib.util import *
+from .lib.segment import GDT_32
+from .lib.windows.pe import PE
+from .lib.windows.i386 import *
+from .lib.windows import hooks as m_hooks
+
+from ctypes import sizeof
 
 import sys
 import struct
@@ -38,12 +39,17 @@ class Windows(Unitracer):
 
     dlls = []
     dll_funcs = {}
-    hooks = {}
+    api_hooks = {}
+    hooks = []
     dll_path = [os.path.join('unitracer', 'lib', 'windows', 'dll')]
+
+    verbose = True
 
 
     def __init__(self, os="Windows 7", bits=32, mem_size = 15*1024*1024):
         self.bits = bits
+        self.bytes = bits/8
+        self.is64 = True if bits == 64 else False
         self.os = os
 
         assert bits == 32, "currently only 32 bit is supported"
@@ -268,32 +274,36 @@ class Windows(Unitracer):
 
 
     def _hook_code(self, uc, address, size, userdata):
+        api_hooks = self.api_hooks
         hooks = self.hooks
         dll_funcs = self.dll_funcs
         cs = self.cs
 
-        code = uc.mem_read(address, size)
-        # for insn in cs.disasm(str(code), address):
-        #     print('0x{0:08x}: \t{1}\t{2}'.format(insn.address, insn.mnemonic, insn.op_str))
+        for hook in hooks:
+            hook(self, address, size, userdata)
+
+        if self.verbose:
+            code = uc.mem_read(address, size)
+            for insn in cs.disasm(str(code), address):
+                print('0x{0:08x}: \t{1}\t{2}'.format(insn.address, insn.mnemonic, insn.op_str))
 
         esp = uc.reg_read(UC_X86_REG_ESP)
 
         if address in dll_funcs.values():
             func = {v:k for k, v in dll_funcs.items()}[address]
-            if func in hooks.keys():
-                if hasattr(hooks[func], 'hook'):
-                    hooks[func].hook(address, esp, self)
+            if func in api_hooks.keys():
+                if hasattr(api_hooks[func], 'hook'):
+                    api_hooks[func].hook(address, esp, self)
                 else:
-                    hooks[func](address, esp, self)
+                    api_hooks[func](address, esp, self)
             else:
                 print("unregistered function: {}".format(func))
 
     def _load_hooks(self):
-        _hooks = self.hooks
-        m = unitracer.lib.windows.hooks
-        for n in m.hooks:
-            _hooks[n] = getattr(m, n)
-        self.hooks = _hooks
+        api_hooks = self.api_hooks
+        for n in m_hooks.hooks:
+            api_hooks[n] = getattr(m_hooks, n)
+        self.api_hooks = api_hooks
 
 
     def load_code(self, data):

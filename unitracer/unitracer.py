@@ -1,6 +1,7 @@
-from __future__ import absolute_import
+from unicorn.x86_const import *
 
 from .lib.util import *
+
 
 class Unitracer(object):
     regmap = {
@@ -27,20 +28,31 @@ class Unitracer(object):
     def unpack(self, x):
         return {32: u32, 64: u64}[self.bits](x)
 
-    def getstack(self, esp):
-        data = self.emu.mem_read(esp, self.bits/8)
+    def getstack(self, idx):
+        sp = self.getSP()
+        data = self.emu.mem_read(sp+(idx*self.bytes), self.bytes)
         return self.unpack(data)
 
+    def setstack(self, idx, val):
+        sp = self.getSP()
+        self.emu.mem_write(sp+(idx*self.bytes), self.pack(val))
+
     def popstack(self):
-        esp = self.emu.reg_read(self.regmap['sp'][self.bits/64])
-        data = self.getstack(esp)
-        self.emu.reg_write(self.regmap['sp'][self.bits/64], esp+4)
+        sp = self.getSP()
+        data = self.getstack(0)
+        self.setSP(sp+self.bytes)
         return data
 
     def pushstack(self, data):
-        esp = self.emu.reg_read(self.regmap['sp'][self.bits/64])
-        self.emu.reg_write(self.regmap['sp'][self.bits/64], esp-4)
-        self.emu.mem_write(esp-4, self.pack(data))
+        sp = self.getSP()
+        self.setstack(-1, data)
+        self.setSP(sp-self.bytes)
+
+    def setSP(self, val):
+        self.emu.reg_write(self.ucreg('sp'), val)
+
+    def getSP(self):
+        return self.emu.reg_read(self.ucreg('sp'))
 
     def packstr(self, s):
         return s.split("\x00", 1)[0]
@@ -53,14 +65,13 @@ class Unitracer(object):
                 break
         return self.packstr(data)
 
-    def setSP(self, val):
-        self.emu.reg_write(self.regmap['sp'][self.bits/64], val)
+    def ucreg(self, n):
+        return self.regmap[n][self.is64]
 
     def dumpregs(self, regs):
         for reg in regs:
-            uc_reg = self.regmap[reg[1:]][self.bits/64]
-            val = self.emu.reg_read(uc_reg)
-            print(("{0}: 0x{1:0"+str(self.bits/4)+"x}").format(reg, val))
+            val = self.emu.reg_read(self.ucreg(reg[1:].lower()))
+            print(("{0}: 0x{1:0"+str(self.bytes*2)+"x}").format(reg, val))
 
     def emu_init(self):
         raise NotImplementedError
