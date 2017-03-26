@@ -74,7 +74,7 @@ class Windows(Unitracer):
             "Windows 2008"      : [PEB_2008,    PEB_2008_64],
             "Windows 2008 R2"   : [PEB_2008_R2, PEB_2008_R2_64],
             "Windows 7"         : [PEB_W7,      PEB_W7_64],
-        }[os][bits/64]
+        }[os][self.is64]
 
         self.TEB = {
             "Windows NT"        : [TEB_NT,      None],
@@ -85,7 +85,7 @@ class Windows(Unitracer):
             "Windows 2008"      : [TEB_2008,    TEB_2008_64],
             "Windows 2008 R2"   : [TEB_2008_R2, TEB_2008_R2_64],
             "Windows 7"         : [TEB_W7,      TEB_W7_64],
-        }[os][bits/64]
+        }[os][self.is64]
 
         if bits == 32:
             # init Thread Information Block
@@ -287,15 +287,10 @@ class Windows(Unitracer):
             for insn in cs.disasm(str(code), address):
                 print('0x{0:08x}: \t{1}\t{2}'.format(insn.address, insn.mnemonic, insn.op_str))
 
-        esp = uc.reg_read(UC_X86_REG_ESP)
-
         if address in dll_funcs.values():
             func = {v:k for k, v in dll_funcs.items()}[address]
             if func in api_hooks.keys():
-                if hasattr(api_hooks[func], 'hook'):
-                    api_hooks[func].hook(address, esp, self)
-                else:
-                    api_hooks[func](address, esp, self)
+                    api_hooks[func].hook(self)
             else:
                 print("unregistered function: {}".format(func))
 
@@ -325,8 +320,8 @@ class Windows(Unitracer):
         STACK_SIZE = self.STACK_SIZE
         emu.mem_map(STACK_BASE - STACK_SIZE, align(STACK_SIZE))
         print("stack: 0x{0:08x}-0x{1:08x}".format(STACK_BASE - STACK_SIZE, STACK_BASE))
-        emu.reg_write(UC_X86_REG_ESP, STACK_BASE)
-        emu.reg_write(UC_X86_REG_EBP, STACK_BASE)
+        emu.reg_write(self.ucreg('sp'), STACK_BASE)
+        emu.reg_write(self.ucreg('bp'), STACK_BASE)
 
         # mu.hook_add(UC_HOOK_CODE, self._hook_code, None, DLL_BASE, DLL_BASE + 6 * PageSize)
         emu.hook_add(UC_HOOK_CODE, self._hook_code)
@@ -386,8 +381,8 @@ class Windows(Unitracer):
         STACK_SIZE = self.STACK_SIZE
         emu.mem_map(STACK_BASE - STACK_SIZE, align(STACK_SIZE))
         print("stack: 0x{0:08x}-0x{1:08x}".format(STACK_BASE - STACK_SIZE, STACK_BASE))
-        emu.reg_write(UC_X86_REG_EBP, STACK_BASE)
-        emu.reg_write(UC_X86_REG_ESP, STACK_BASE)
+        emu.reg_write(self.ucreg('sp'), STACK_BASE)
+        emu.reg_write(self.ucreg('bp'), STACK_BASE)
 
         # mu.hook_add(UC_HOOK_CODE, self._hook_code, None, DLL_BASE, DLL_BASE + 6 * PageSize)
         emu.hook_add(UC_HOOK_CODE, self._hook_code)
