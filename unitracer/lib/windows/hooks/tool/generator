@@ -1,0 +1,80 @@
+#!/usr/bin/env python2
+
+import os
+
+LIBLLVM_PATH = '/usr/local/Cellar/llvm/3.6.2/lib'
+LIBLLVM_PYTHON_PATH = os.path.join(LIBLLVM_PATH, 'python2.7/site-packages')
+
+import sys
+sys.path.append(LIBLLVM_PYTHON_PATH)
+
+from clang.cindex import Index
+from clang.cindex import Config
+
+Config.set_library_path(LIBLLVM_PATH)
+
+
+
+def print_node_tree(node, depth=0):
+    print node.kind.name, node.spelling, node.location.line
+    for child in node.get_children():
+        sys.stdout.write("  "*depth)
+        print_node_tree(child, depth+1)
+
+
+def extract_func(node):
+    res = dict()
+    for c in node.get_children():
+        if '__attribute__((stdcall))' in c.type.spelling:
+            if c.kind.name == 'FUNCTION_DECL':
+                res[c.spelling] = get_func(c)
+    return res
+
+def get_func(node):
+    assert node.kind.name == 'FUNCTION_DECL'
+    ret = dict()
+    ret['ret'] = node.result_type.spelling
+    ret['args'] = list()
+    for c in node.get_arguments():
+        ret['args'].append([c.type.spelling, c.spelling])
+    return ret
+
+def search_func(node, funcname):
+    for c in node.get_children():
+        if c.kind.name == 'FUNCTION_DECL' and c.displayname.startswith(funcname):
+            return c
+        else:
+            return search_func(c, funcname)
+
+
+MINGW_HEADER_DIR = '/Users/icchy/Downloads/mingw-w64-v3.1.0/mingw-w64-headers/include/'
+LICENSE = os.path.join(MINGW_HEADER_DIR, '..', '..', 'COPYING')
+
+index = Index.create()
+
+# winbase_h = os.path.join(MINGW_HEADER_DIR, 'winbase.h')
+# windows_h = os.path.join(MINGW_HEADER_DIR, 'windows.h')
+
+
+# cd MINGW_HEADER_DIR && clang -E -I ../crt -I ../include windows.h > all.h
+all_h = os.path.join(MINGW_HEADER_DIR, 'all.h')
+tu = index.parse(all_h)
+
+
+# sys.exit(1)
+
+apis = extract_func(tu.cursor)
+
+print 'from .hook import Hook'
+print ''
+
+# print ''
+# print "'''"
+# print open(LICENSE).read()
+# print "'''"
+# print ''
+
+for api in apis:
+    args = apis[api]['args']
+    ret = apis[api]['ret']
+    print "{} = Hook({}, {}, {})".format(api, repr(api), repr(ret), repr(args))
