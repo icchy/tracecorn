@@ -14,6 +14,14 @@ Windows API tracer for malware
  * using [original PE parser](https://github.com/icchy/pe) (faster than pefile)
 
 ## Usage
+ * First you should copy required dlls from your Windows.
+   * 32bit Windows
+     * from `%windir%\System32` to `unitracer/lib/windows/dll/32`
+     * 64bit dlls are not included in 32bit Windows.
+   * 64bit Windows
+     * from `%windir%\System32` to `unitracer/lib/windows/dll/64`
+     * from `%windir%\SysWOW64` to `unitracer/lib/windows/dll/32`
+
 ```python
 import unitracer
 from unicorn.x86_const import *
