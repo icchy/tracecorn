@@ -52,10 +52,13 @@ class Windows(Unitracer):
         self.is64 = True if bits == 64 else False
         self.os = os
 
-        assert bits == 32, "currently only 32 bit is supported"
+        assert bits in [32, 64], "bits must be 32 or 64"
 
-        self.emu = Uc(UC_ARCH_X86, UC_MODE_32)
-        cs = Cs(CS_ARCH_X86, CS_MODE_32)
+        ucmode = UC_MODE_32 if bits == 32 else UC_MODE_64
+        csmode = CS_MODE_32 if bits == 32 else CS_MODE_64
+            
+        self.emu = Uc(UC_ARCH_X86, ucmode)
+        cs = Cs(CS_ARCH_X86, csmode)
         self.cs = cs
         self._load_hooks()
 
@@ -313,7 +316,7 @@ class Windows(Unitracer):
         # map shellcode
         emu.mem_map(ADDRESS, align(len(data)))
         emu.mem_write(ADDRESS, data)
-        emu.reg_write(UC_X86_REG_EIP, ADDRESS)
+        emu.reg_write(self.ucreg('ip'), ADDRESS)
 
         # init stack
         STACK_BASE = self.STACK_BASE
