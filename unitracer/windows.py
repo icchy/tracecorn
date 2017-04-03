@@ -41,7 +41,7 @@ class Windows(Unitracer):
     dll_funcs = {}
     api_hooks = {}
     hooks = []
-    dll_path = [os.path.join('unitracer', 'lib', 'windows', 'dll')]
+    dll_path = [os.path.join('unitracer', 'lib', 'windows', 'dll', str(bits))]
 
     verbose = True
 
