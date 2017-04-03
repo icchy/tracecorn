@@ -27,7 +27,7 @@ def RegSetValueExA(ut):
     cbData = ut.popstack()
 
     dwType_s = None
-    m = importlib.import_module('advapi32', package="..i386")
+    m = importlib.import_module('.'.join(['unitracer', 'lib', 'windows', 'i386', 'advapi32']))
     for n in dir(m):
         if n.startswith('REG_'):
             if getattr(m, n) == dwType:
