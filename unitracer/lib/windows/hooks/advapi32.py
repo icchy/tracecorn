@@ -1,19 +1,23 @@
 from unicorn.x86_const import *
-from ..i386 import advapi32
+import importlib
 
-def RegCreateKeyA(ip, sp, ut):
+
+hooks = None
+hooks = set(vars().keys())
+
+def RegCreateKeyA(ut):
     retaddr = ut.popstack()
     hKey = ut.popstack()
     lpSubKey = ut.popstack()
     phkResult = ut.popstack()
 
-    print '0x{0:08x}: RegCreateKeyA (hKey=0x{1:x}, lpSubkey="{2}", phkResult=0x{3:x})'.format(ip, hKey, ut.getstr(lpSubKey), phkResult)
+    print 'RegCreateKeyA (hKey=0x{0:x}, lpSubkey="{1}", phkResult=0x{2:x})'.format(hKey, ut.getstr(lpSubKey), phkResult)
     ut.emu.mem_write(phkResult, ut.pack(0x12341234))
     ut.emu.reg_write(UC_X86_REG_EAX, 0)
     ut.pushstack(retaddr)
 
 
-def RegSetValueExA(ip, sp, ut):
+def RegSetValueExA(ut):
     retaddr = ut.popstack()
     hKey = ut.popstack()
     lpValueName = ut.popstack()
@@ -23,20 +27,24 @@ def RegSetValueExA(ip, sp, ut):
     cbData = ut.popstack()
 
     dwType_s = None
-    for n in dir(advapi32):
+    m = importlib.import_module('advapi32', package="..i386")
+    for n in dir(m):
         if n.startswith('REG_'):
-            if getattr(advapi32, n) == dwType:
+            if getattr(m, n) == dwType:
                 dwType_s = n
 
-    print '0x{0:08x}: RegSetValueExA (hKey=0x{1:x}, lpValueName="{2}", dwType={3}, lpData="{4}", cbData={5})'.format(ip, hKey, ut.getstr(lpValueName), dwType_s, ut.getstr(lpData), cbData)
+    print 'RegSetValueExA (hKey=0x{0:x}, lpValueName="{1}", dwType={2}, lpData="{3}", cbData={4})'.format(hKey, ut.getstr(lpValueName), dwType_s, ut.getstr(lpData), cbData)
     ut.emu.reg_write(UC_X86_REG_EAX, 0)
     ut.pushstack(retaddr)
 
 
-def RegCloseKey(ip, sp, ut):
+def RegCloseKey(ut):
     retaddr = ut.popstack()
     hKey = ut.popstack()
 
-    print '0x{0:08x}: RegCloseKey (hKey=0x{1:x})'.format(ip, hKey)
+    print 'RegCloseKey (hKey=0x{0:x})'.format(hKey)
     ut.emu.reg_write(UC_X86_REG_EAX, 0)
     ut.pushstack(retaddr)
+
+hooks = set(vars().keys()).difference(hooks)
+hooks = [_x for _x in hooks if not _x.startswith('_')]
