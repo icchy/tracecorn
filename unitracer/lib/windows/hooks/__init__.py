@@ -21,13 +21,17 @@ for f in os.listdir(os.path.dirname(__file__)):
     m = importlib.import_module('.'.join(['unitracer', 'lib', 'windows', 'hooks', name]))
     for n in getattr(m, 'hooks'):
         mn = n # module name
+        if n in vars().keys():
+            globals()[mn].hook = getattr(m, n)
+
         if n not in vars().keys():
-            # check function for Unicode or ANSI Strings
-            if mn + 'A' in vars().keys() or mn + 'W' in vars().keys():
-                mn += 'A' # force convert to ANSI Strings
-            else:
-                continue
-        globals()[mn].hook = getattr(m, n)
+            globals()[mn] = Hook()
+            globals()[mn].hook = getattr(m, n)
+
+        # check function for Unicode or ANSI Strings
+        if mn + 'A' in vars().keys() or mn + 'W' in vars().keys():
+            mn += 'A' # force convert to ANSI Strings
+            globals()[mn].hook = getattr(m, n)
 
 
 hooks = set(vars().keys()).difference(hooks)
