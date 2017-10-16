@@ -9,12 +9,14 @@ from .lib.segment import GDT_32
 from .lib.windows.pe import PE
 from .lib.windows.i386 import *
 from .lib.windows import hooks as m_hooks
+from .lib.windows.hooks.tool.hook import Hook
 
 from ctypes import sizeof
 
 import sys
 import struct
 import os
+import types
 
 
 class Windows(Unitracer):
@@ -290,7 +292,15 @@ class Windows(Unitracer):
         if address in dll_funcs.values():
             func = {v:k for k, v in dll_funcs.items()}[address]
             if func in api_hooks.keys():
-                    api_hooks[func].hook(self)
+                hook = api_hooks[func]
+                if isinstance(hook, Hook):
+                    # predefined hook
+                    hook.hook(self)
+                elif isinstance(hook, types.FunctionType):
+                    # user defined hook
+                    hook(self)
+                else:
+                    print("unknown hook type: {}".format(type(hook)))
             else:
                 print("unregistered function: {}".format(func))
 
