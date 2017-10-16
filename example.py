@@ -1,20 +1,3 @@
-# unitracer
-Windows API tracer for malware
-
- * based on [Dutas](https://github.com/dungtv543/Dutas) and [PyAna](https://github.com/PyAna/PyAna)
-
-## Requirements
- * Unicorn 1.0
- * Capstone
- * some dlls
-
-## Features
- * Windows API trace/hook
- * setup special data of TIB, PEB, LDR...
- * using [original PE parser](https://github.com/icchy/pe) (faster than pefile)
-
-## Usage
-```python
 import unitracer
 from unicorn.x86_const import *
 
@@ -53,12 +36,3 @@ uni.hooks.append(myhook)
 uni.verbose = False
 
 uni.start(0)
-```
-
-## Sample
- * running `samples/URLDownloadToFile.sc`
- ![sample](http://imgur.com/AHzR1ZJ.png)
-
-## TODO
- * 64 bit
- * etc...
